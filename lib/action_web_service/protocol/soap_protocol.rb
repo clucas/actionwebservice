@@ -102,12 +102,16 @@ module ActionWebService # :nodoc:
             response = SOAP::RPC::SOAPMethodResponse.new(qname, nil)
           else
             if return_value.is_a?(Exception)
-              detail = SOAP::Mapping::SOAPException.new(return_value)
-              response = SOAP::SOAPFault.new(
-                SOAP::SOAPQName.new('%s:%s' % [SOAP::SOAPNamespaceTag, 'Server']),
-                SOAP::SOAPString.new(return_value.to_s),
-                SOAP::SOAPString.new(self.class.name),
-                marshaler.ruby_to_soap(detail))
+              if return_value.respond_to?(:to_soap_fault)
+                response = return_value.to_soap_fault
+              else
+                detail = SOAP::Mapping::SOAPException.new(return_value)
+                response = SOAP::SOAPFault.new(
+                  SOAP::SOAPQName.new('%s:%s' % [SOAP::SOAPNamespaceTag, 'Server']),
+                  SOAP::SOAPString.new(return_value.to_s),
+                  SOAP::SOAPString.new(self.class.name),
+                  marshaler.ruby_to_soap(detail))
+              end
             else
               if return_type
                 param_def = [['retval', 'return', marshaler.lookup_type(return_type).mapping]]
