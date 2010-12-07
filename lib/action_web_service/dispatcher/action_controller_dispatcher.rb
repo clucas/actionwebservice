@@ -31,7 +31,7 @@ module ActionWebService # :nodoc:
       module ClassMethods # :nodoc:
         def inherited_with_action_controller(child)
           inherited_without_action_controller(child)
-          # child.send(:include, ActionWebService::Dispatcher::ActionController::WsdlAction)
+          child.send(:include, ActionWebService::Dispatcher::ActionController::WsdlAction)
         end
       end
 
@@ -187,15 +187,14 @@ module ActionWebService # :nodoc:
         private
           def base_uri
             host = request.host_with_port
-            # TODO replace relative_url_root 
-            relative_url_root = '' #::ActionController::Base.relative_url_root
+            relative_url_root = ::ActionController::Base.relative_url_root
             scheme = request.ssl? ? 'https' : 'http'
             '%s://%s%s/%s/' % [scheme, host, relative_url_root, self.class.controller_path]
           end
 
           def to_wsdl
             xml = ''
-            inflect = web_service_inflect_type
+            #inflect = web_service_inflect_type
             dispatching_mode = web_service_dispatching_mode
             global_service_name = wsdl_service_name
             namespace = wsdl_namespace || 'urn:ActionWebService'
@@ -206,8 +205,7 @@ module ActionWebService # :nodoc:
             case dispatching_mode
             when :direct
               api = self.class.web_service_api
-              web_service_name =  self.class.to_s.sub(/Controller$/, '').underscore
-              api = (web_service_name + '_api').classify.constantize unless api
+              web_service_name = controller_class_name.sub(/Controller$/, '').underscore
               apis[web_service_name] = [api, register_api(api, marshaler)]
             when :delegated, :layered
               self.class.web_services.each do |web_service_name, info|
@@ -237,25 +235,11 @@ module ActionWebService # :nodoc:
               if custom_types.size > 0
                 xm.types do
                   xm.xsd(:schema, 'xmlns' => XsdNs, 'targetNamespace' => namespace) do
-                    simple_types, array_types, complex_types = [], [], []
+                    #simple_types, array_types, complex_types = [], [], []
                     custom_types.each do |binding|
                       case
-                        when binding.type.simple? then simple_types.push binding
-                        when binding.type.array? then array_types.push binding
-                        when binding.type.structured? then complex_types.push binding
-                      end
-                    end
-                    simple_types.each do |binding|
-                      xm.xsd(:simpleType, 'name' => inflect ? binding.type_name.camelize(:lower) : binding.type_name) do
-                        xm.xsd(:restriction, 'base' => "xsd:#{binding.type.base}") do
-                          binding.type.restrictions do |name, value|
-                            xm.xsd(name.to_sym, 'value' => value)
-                          end
-                        end
-                      end
-                    end
-                    array_types.each do |binding|
-                      xm.xsd(:complexType, 'name' => inflect ? binding.type_name.camelize(:lower) : binding.type_name) do
+                      when binding.type.array?
+                        xm.xsd(:complexType, 'name' => binding.type_name) do
                         xm.xsd(:complexContent) do
                           xm.xsd(:restriction, 'base' => 'soapenc:Array') do
                             xm.xsd(:attribute, 'ref' => 'soapenc:arrayType',
@@ -263,14 +247,13 @@ module ActionWebService # :nodoc:
                           end
                         end
                       end
-                    end
-                    complex_types.each do |binding|
-                      xm.xsd(:complexType, 'name' => inflect ? binding.type_name.camelize(:lower) : binding.type_name) do
+                      when binding.type.structured?
+                        xm.xsd(:complexType, 'name' => binding.type_name) do
                         xm.xsd(:all) do
-                          binding.type.each_member do |name, type, options|
-                            options ||= {}
+                            binding.type.each_member do |name, type|
                             b = marshaler.register_type(type)
-                            xm.xsd(:element, {'name' => inflect ? name.to_s.camelize : name, 'type' => b.qualified_type_name('typens')}.merge(options))
+                              xm.xsd(:element, 'name' => name, 'type' => b.qualified_type_name('typens'))
+                            end
                           end
                         end
                       end

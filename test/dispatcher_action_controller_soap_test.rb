@@ -1,6 +1,6 @@
 # encoding: UTF-8
 $:.unshift(File.dirname(__FILE__) + '/apis')
-require 'abstract_dispatcher'
+require File.dirname(__FILE__) + '/abstract_dispatcher'
 require 'wsdl/parser'
 
 class ActionController::Base

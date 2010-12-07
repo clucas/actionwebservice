@@ -57,8 +57,6 @@ module ActionWebService # :nodoc:
             value.entries.map do |entry|
               cast(entry, signature_type.element_type)
             end
-          elsif signature_type.simple?
-            return value
           elsif signature_type.structured?
             cast_to_structured_type(value, signature_type)
           elsif !signature_type.custom?
@@ -101,10 +99,8 @@ module ActionWebService # :nodoc:
           when :decimal
             BigDecimal(value.to_s)
           when :time
-            if value.kind_of?(Hash)
-              value = "%s/%s/%s %s:%s:%s" % value.values_at(*%w[2 3 1 4 5 6])
-              Time.respond_to?(:strptime) ? Time.strptime(value.to_s, "%m/%d/%Y %H:%M:%S") : Time.parse(value.to_s)
-            elsif value.kind_of?(Time) 
+            value = "%s/%s/%s %s:%s:%s" % value.values_at(*%w[2 3 1 4 5 6]) if value.kind_of?(Hash)
+            if value.kind_of?(Time) 
               value
             elsif value.kind_of?(DateTime)
               value.to_time
@@ -112,16 +108,10 @@ module ActionWebService # :nodoc:
               Time.parse(value.to_s)
             end
           when :date
-            if value.kind_of?(Hash)
-              value = "%s/%s/%s" % value.values_at(*%w[2 3 1])
-              return Date.strptime(value.to_s,"%m/%d/%Y")
-            end
+            value = "%s/%s/%s" % value.values_at(*%w[2 3 1]) if value.kind_of?(Hash)
             value.kind_of?(Date) ? value : Date.parse(value.to_s)
           when :datetime
-            if value.kind_of?(Hash)
-              value = "%s/%s/%s %s:%s:%s" % value.values_at(*%w[2 3 1 4 5 6])
-              return DateTime.strptime(value.to_s,"%m/%d/%Y %H:%M:%S")
-            end
+            value = "%s/%s/%s %s:%s:%s" % value.values_at(*%w[2 3 1 4 5 6]) if value.kind_of?(Hash)
             value.kind_of?(DateTime) ? value : DateTime.parse(value.to_s)
           end
         end
