@@ -1,4 +1,13 @@
 # encoding: UTF-8
+
+if RUBY_VERSION.to_f >= 1.9
+  # this module has gone in ruby >= 1.9
+  module Precision; end
+  Float.class_eval do
+    include Precision
+  end
+end
+
 module ActionWebService # :nodoc:
   # Action Web Service supports the following base types in a signature:
   #
