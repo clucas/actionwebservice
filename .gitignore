@@ -3,3 +3,4 @@ debug.log
 actionwebservice_unittest.db
 *.gem
 .svn
+git.tbz
